@@ -231,7 +231,8 @@ class Player(AbstractPlayer):
         """
         return utils._parse_field(PLAYER_SCHEME, row, 'season')
 
-    def _combine_season_stats(self, table_rows, career_stats, all_stats_dict):
+    def _combine_season_stats(self, table_rows, per_100_stats, career_stats,
+                              all_stats_dict):
         """
         Combine all stats for each season.
 
@@ -243,6 +244,9 @@ class Player(AbstractPlayer):
         ----------
         table_rows : generator
             A generator where each element is a row in a stats table.
+        per_100_stats : generator
+            A generator where each element is a row in the per 100 possessions
+            stats table.
         career_stats : generator
             A generator where each element is a row in the footer of a stats
             table. Career stats are kept in the footer, hence the usage.
@@ -268,6 +272,10 @@ class Player(AbstractPlayer):
             except KeyError:
                 all_stats_dict[season] = {'data': str(row)}
             most_recent_season = season
+        for row in per_100_stats:
+            season = self._parse_season(row)
+            try:
+                all_stats_dict[season]['data'] += str(row)
         self._most_recent_season = most_recent_season
         if not career_stats:
             return all_stats_dict
@@ -298,15 +306,19 @@ class Player(AbstractPlayer):
             by season to allow easy queries by year.
         """
         all_stats_dict = {}
+        possession_stats = {}
 
-        for table_id in ['totals', 'advanced', 'shooting', 'advanced_pbp',
-                         'all_salaries']:
+        for table_id in ['totals', 'per_poss', 'advanced', 'shooting',
+                         'advanced_pbp', 'all_salaries']:
             table_items = utils._get_stats_table(player_info,
                                                  'table#%s' % table_id)
             career_items = utils._get_stats_table(player_info,
                                                   'table#%s' % table_id,
                                                   footer=True)
+            per_100_items = utils._get_stats_table(player_info,
+                                                   'table#%s' % table_id)
             all_stats_dict = self._combine_season_stats(table_items,
+                                                        per_100_items,
                                                         career_items,
                                                         all_stats_dict)
         return all_stats_dict
